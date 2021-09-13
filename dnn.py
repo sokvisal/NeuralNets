@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from numpy.lib.function_base import gradient
 
 # This is a binary classification deep neural network models. Designed to classify galaxies as being in clumpy in morphologies or not
+# Note that this is a generalized code (can define a number of hidden layers and nodes), adapted from Andrew Ng's Deep Learning Specialization course on Coursera
+
 
 class BinaryModel:
     def __init__(self, trainingData, trainingClass, layer_dims = [10,1], keep_prob=1, alpha=0.005, iter_=1000):
@@ -37,15 +39,28 @@ class BinaryModel:
     def train(self):
 
         for i in tqdm(range(self.iter)):
-            self._forward_pass(self.layer_dims)
+            self._forward_pass( self.trainingData)
             self._backward_pass(self.layer_dims)
             self._update_parameters()
 
-        print (self.caches['A3'])
         # return self.weights, self.biases
 
-    def get_prediction(self):
-        return self.caches['A3']
+    def get_training_prediction(self):
+        # convert probas to 0/1 predictions
+        prediction = np.zeros((1,self.training_size))
+        prediction[self.caches['A3']>0.8] = 1
+        
+        return prediction
+
+    def classify(self, data):
+        self.data = data
+        self._forward_pass( self.data )
+
+        prediction = np.zeros((1,self.data.shape[1]))
+        prediction[self.caches['A3']>0.8] = 1
+        
+        return prediction
+
 
     def _softmax(self, z, deri=False):
         z_exp = np.exp(z - z.max())
@@ -102,7 +117,7 @@ class BinaryModel:
 
         return activation_matrix
 
-    def _forward_pass(self, layer_dims):
+    def _forward_pass(self, data):
         '''
         Since the NN is generalized, we need to set up the unique conditions for the first hidden layer and output layer. 
         In the first hidden layer, the weight matrix is dotted by the input data. In the output layer, the activation function is taken to be the sigmoid function.
@@ -111,7 +126,7 @@ class BinaryModel:
         # define the caches for later use
         self.caches = {}
 
-        for i in range(1, len(layer_dims)):
+        for i in range(1, len(self.layer_dims)):
             
             w = self.parameters['W{}'.format(i)]
             b = self.parameters['B{}'.format(i)]
@@ -120,12 +135,12 @@ class BinaryModel:
             # otherwise use the sigmoid function
             # note that if keep_prob = 1 then there is no regularization as no nodes are dropped out
             if i == 1:
-                self.caches['Z{}'.format(i)] = np.dot(w, self.trainingData) + b
+                self.caches['Z{}'.format(i)] = np.dot(w, data) + b
                 self.caches['A{}'.format(i)] = self._relu( self.caches['Z{}'.format(i)] )
 
                 self.caches['A{}'.format(i)] = self._drop_out(self.caches['A{}'.format(i)] )
 
-            elif i == len(layer_dims)-1:
+            elif i == len(self.layer_dims)-1:
                 self.caches['Z{}'.format(i)] = np.dot(w, self.caches['A{}'.format(i-1)]) + b
                 self.caches['A{}'.format(i)] = self._sigmoid( self.caches['Z{}'.format(i)] ) # _sigmoid
             else:
